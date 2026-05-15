@@ -1,0 +1,11 @@
+.build/
+.swiftpm/
+*.sqlite
+*.sqlite-*
+DerivedData/
+UniferAndroid/.gradle/
+UniferAndroid/app/build/
+UniferAndroid/local.properties
+.idea/
+dist/
+*.app
