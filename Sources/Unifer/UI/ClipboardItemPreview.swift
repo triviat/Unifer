@@ -2,6 +2,25 @@ import AppKit
 import Foundation
 
 enum ClipboardItemPreview {
+    static func primaryTitle(for item: ClipboardItemRecord) -> String {
+        if let name = headerTitle(for: item) {
+            return name
+        }
+
+        if let url = linkURL(for: item) {
+            return url.host?.replacingOccurrences(of: "www.", with: "") ?? "Link"
+        }
+
+        switch item.primaryKind {
+        case ClipboardPrimaryKind.text.rawValue: return "Text"
+        case ClipboardPrimaryKind.url.rawValue: return "Link"
+        case ClipboardPrimaryKind.image.rawValue: return "Image"
+        case ClipboardPrimaryKind.html.rawValue: return "Rich Text"
+        case ClipboardPrimaryKind.file.rawValue: return "Files"
+        default: return "Clip"
+        }
+    }
+
     static func image(for item: ClipboardItemRecord, payloadsRoot: URL) -> NSImage? {
         let folder = payloadsRoot.appendingPathComponent(item.payloadPath, isDirectory: true)
 
@@ -61,6 +80,17 @@ enum ClipboardItemPreview {
         }
 
         return firstImageURL(inHTML: html)
+    }
+
+    static func linkURL(for item: ClipboardItemRecord) -> URL? {
+        guard let raw = item.plainText?.trimmingCharacters(in: .whitespacesAndNewlines),
+              let url = URL(string: raw),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https"
+        else {
+            return nil
+        }
+        return url
     }
 
     private static func preferredImageFileNames(manifestIn folder: URL) -> [String] {

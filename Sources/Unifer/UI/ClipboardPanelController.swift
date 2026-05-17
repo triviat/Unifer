@@ -5,7 +5,7 @@ import SwiftUI
 final class ClipboardPanelController: NSObject {
     static let horizontalInset: CGFloat = 12
     static let bottomInset: CGFloat = 12
-    static let shelfHeight: CGFloat = 280
+    static let shelfHeight: CGFloat = 324
 
     private let library: ClipboardLibraryModel
     private var panel: NSPanel?
@@ -136,16 +136,24 @@ final class ClipboardPanelController: NSObject {
             return false
         }
 
-        let flags = event.modifierFlags.intersection([.command, .option, .control])
+        let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
 
         switch event.keyCode {
         case 53:
             hide()
             return true
         case 123, 126:
+            if flags.contains(.shift) {
+                library.moveCollectionSelection(delta: -1)
+                return true
+            }
             library.moveSelection(delta: -1)
             return true
         case 124, 125:
+            if flags.contains(.shift) {
+                library.moveCollectionSelection(delta: 1)
+                return true
+            }
             library.moveSelection(delta: 1)
             return true
         case 36, 76:

@@ -35,6 +35,16 @@ final class ClipboardLibraryModel: ObservableObject {
         selectedItemIndex = 0
     }
 
+    func moveCollectionSelection(delta: Int) {
+        let allCollectionIds = [Int64?.none] + collections.map(\.id)
+        guard !allCollectionIds.isEmpty else { return }
+        let currentIndex = allCollectionIds.firstIndex(where: { $0 == selectedCollectionId }) ?? 0
+        let nextIndex = min(max(currentIndex + delta, 0), allCollectionIds.count - 1)
+        selectedCollectionId = allCollectionIds[nextIndex]
+        selectedItemIndex = 0
+        clampSelection()
+    }
+
     func refresh(resetSelectionToStart: Bool = false) {
         do {
             collections = try repository.allCollections()

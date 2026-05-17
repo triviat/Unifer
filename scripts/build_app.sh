@@ -9,13 +9,12 @@ VERSION="${UNIFER_VERSION:-1.0}"
 BUILD_NUMBER="${UNIFER_BUILD_NUMBER:-1}"
 MIN_MACOS_VERSION="${UNIFER_MIN_MACOS_VERSION:-14.0}"
 CONFIGURATION="${1:-release}"
-BUILD_DIR="$ROOT_DIR/.build/$CONFIGURATION"
 APP_DIR="$ROOT_DIR/dist/${PRODUCT_NAME}.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 PLIST_PATH="$CONTENTS_DIR/Info.plist"
-EXECUTABLE_PATH="$BUILD_DIR/$PRODUCT_NAME"
+EXECUTABLE_PATH=""
 
 if [[ "$CONFIGURATION" != "debug" && "$CONFIGURATION" != "release" ]]; then
   echo "Usage: $0 [debug|release]"
@@ -24,6 +23,14 @@ fi
 
 echo "==> Building $PRODUCT_NAME ($CONFIGURATION)"
 (cd "$ROOT_DIR" && swift build -c "$CONFIGURATION")
+
+if [[ -f "$ROOT_DIR/.build/$CONFIGURATION/$PRODUCT_NAME" ]]; then
+  EXECUTABLE_PATH="$ROOT_DIR/.build/$CONFIGURATION/$PRODUCT_NAME"
+elif [[ -f "$ROOT_DIR/.build/arm64-apple-macosx/$CONFIGURATION/$PRODUCT_NAME" ]]; then
+  EXECUTABLE_PATH="$ROOT_DIR/.build/arm64-apple-macosx/$CONFIGURATION/$PRODUCT_NAME"
+elif [[ -f "$ROOT_DIR/.build/x86_64-apple-macosx/$CONFIGURATION/$PRODUCT_NAME" ]]; then
+  EXECUTABLE_PATH="$ROOT_DIR/.build/x86_64-apple-macosx/$CONFIGURATION/$PRODUCT_NAME"
+fi
 
 if [[ ! -f "$EXECUTABLE_PATH" ]]; then
   echo "Expected executable not found at: $EXECUTABLE_PATH"

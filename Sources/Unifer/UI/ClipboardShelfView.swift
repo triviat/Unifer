@@ -7,12 +7,12 @@ struct ClipboardShelfView: View {
     @State private var dropTargetCollectionId: Int64?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 20) {
             toolbarRow
 
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(spacing: 12) {
+                    LazyHStack(alignment: .top, spacing: 18) {
                         ForEach(Array(library.displayedItems.enumerated()), id: \.element.uuid) { index, item in
                             ClipboardItemTile(
                                 item: item,
@@ -34,21 +34,28 @@ struct ClipboardShelfView: View {
                             }
                         }
                     }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
                 }
-                .frame(height: 200)
+                .frame(height: 242)
+                .clipped()
                 .onChange(of: library.selectedItemIndex) { _, newIndex in
                     scrollToSelection(proxy: proxy, index: newIndex)
                 }
             }
         }
-        .padding(14)
+        .padding(.horizontal, 22)
+        .padding(.top, 24)
+        .padding(.bottom, 18)
         .frame(maxWidth: .infinity, minHeight: ClipboardPanelController.shelfHeight - 28, maxHeight: ClipboardPanelController.shelfHeight - 28)
         .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(nsColor: .windowBackgroundColor).opacity(0.94))
-                .shadow(color: .black.opacity(0.25), radius: 24, y: 8)
+            RoundedRectangle(cornerRadius: 24)
+                .fill(Color.black.opacity(0.10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24)
+                        .strokeBorder(Color.white.opacity(0.22), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.28), radius: 28, y: 10)
         )
         .onAppear {
             library.refresh()
@@ -62,52 +69,98 @@ struct ClipboardShelfView: View {
     }
 
     private var toolbarRow: some View {
-        HStack(spacing: 10) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    collectionChip(
-                        title: "All",
-                        color: nil,
-                        isSelected: library.selectedCollectionId == nil,
-                        collection: nil
-                    )
+        ZStack {
+            HStack(spacing: 14) {
+                searchControl
 
-                    ForEach(Array(library.collections.enumerated()), id: \.offset) { _, col in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
                         collectionChip(
-                            title: col.name,
-                            color: library.color(for: col),
-                            isSelected: library.selectedCollectionId == col.id,
-                            collection: col
+                            title: "Clipboard",
+                            color: nil,
+                            isSelected: library.selectedCollectionId == nil,
+                            collection: nil
                         )
-                    }
 
-                    Button(action: { library.createCollection() }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title3)
-                            .symbolRenderingMode(.hierarchical)
+                        ForEach(Array(library.collections.enumerated()), id: \.offset) { _, col in
+                            collectionChip(
+                                title: col.name,
+                                color: library.color(for: col),
+                                isSelected: library.selectedCollectionId == col.id,
+                                collection: col
+                            )
+                        }
+
+                        toolbarIconButton(systemName: "plus") {
+                            library.createCollection()
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .help("New folder")
                 }
+                .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxWidth: .infinity, alignment: .center)
 
-            Spacer(minLength: 8)
-
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(library.searchQuery.isEmpty ? "Search" : library.searchQuery)
-                    .font(.caption)
-                    .lineLimit(1)
-                    .foregroundStyle(library.searchQuery.isEmpty ? .secondary : .primary)
-                    .frame(width: 140, alignment: .leading)
+            HStack {
+                Spacer()
+                toolbarMenu
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(Color(nsColor: .controlBackgroundColor).opacity(0.55), in: Capsule())
         }
-        .padding(.horizontal, 4)
+        .padding(.horizontal, 2)
+    }
+
+    private var searchControl: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.white.opacity(0.88))
+                .frame(width: 24, height: 24)
+                .background(Color.white.opacity(library.searchQuery.isEmpty ? 0.08 : 0.16), in: Circle())
+
+            if !library.searchQuery.isEmpty {
+                Text(library.searchQuery)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.95))
+                    .lineLimit(1)
+                    .transition(.opacity.combined(with: .move(edge: .leading)))
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.white.opacity(library.searchQuery.isEmpty ? 0.04 : 0.10), in: Capsule())
+        .animation(.easeOut(duration: 0.16), value: library.searchQuery.isEmpty)
+    }
+
+    private var toolbarMenu: some View {
+        Menu {
+            Button("Settings") {
+                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            }
+            Divider()
+            Button("Quit Unifer") {
+                NSApp.terminate(nil)
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Circle().frame(width: 3, height: 3)
+                Circle().frame(width: 3, height: 3)
+                Circle().frame(width: 3, height: 3)
+            }
+            .foregroundStyle(Color.white.opacity(0.85))
+            .frame(width: 30, height: 26)
+            .background(Color.white.opacity(0.04), in: RoundedRectangle(cornerRadius: 13))
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+    }
+
+    private func toolbarIconButton(systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 18, weight: .light))
+                .foregroundStyle(Color.white.opacity(0.95))
+                .frame(width: 28, height: 28)
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
@@ -123,58 +176,65 @@ struct ClipboardShelfView: View {
         }()
 
         HStack(spacing: 6) {
+            if let color {
+                Circle()
+                    .fill(color)
+                    .frame(width: 8, height: 8)
+            }
+
             Text(title)
-                .font(.caption.weight(.semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .lineLimit(1)
         }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(chipFill(isSelected: isSelected, color: color, isDropTarget: isDropTarget))
-            .clipShape(Capsule())
-            .overlay(Capsule().strokeBorder(isDropTarget ? Color.accentColor : .clear, lineWidth: 2))
-            .contentShape(Capsule())
-            .onTapGesture {
-                library.selectCollection(collection)
-            }
-            .contextMenu {
-                if let collection {
-                    Button("Rename…") { promptRenameCollection(collection) }
-                    Menu("Color") {
-                        ForEach(CollectionColor.palette, id: \.self) { hex in
-                            Button {
-                                library.setCollectionColor(collection, hex: hex)
-                            } label: {
-                                Label(CollectionColor.label(for: hex), systemImage: "circle.fill")
-                                    .symbolRenderingMode(.palette)
-                                    .foregroundStyle(CollectionColor.color(forHex: hex))
-                            }
+        .foregroundStyle(Color.white.opacity(isSelected ? 0.98 : 0.88))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(chipFill(isSelected: isSelected, color: color, isDropTarget: isDropTarget))
+        .clipShape(Capsule())
+        .overlay(Capsule().strokeBorder(isDropTarget ? Color.white.opacity(0.55) : .clear, lineWidth: 1))
+        .contentShape(Capsule())
+        .onTapGesture {
+            library.selectCollection(collection)
+        }
+        .contextMenu {
+            if let collection {
+                Button("Rename…") { promptRenameCollection(collection) }
+                Menu("Color") {
+                    ForEach(CollectionColor.palette, id: \.self) { hex in
+                        Button {
+                            library.setCollectionColor(collection, hex: hex)
+                        } label: {
+                            Label(CollectionColor.label(for: hex), systemImage: "circle.fill")
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(CollectionColor.color(forHex: hex))
                         }
                     }
-                    Divider()
-                    Button("Delete folder", role: .destructive) {
-                        library.deleteCollection(collection)
-                    }
+                }
+                Divider()
+                Button("Delete folder", role: .destructive) {
+                    library.deleteCollection(collection)
                 }
             }
-            .onDrop(of: [.plainText], isTargeted: Binding(
-                get: { isDropTarget },
-                set: { targeted in
-                    if collection == nil {
-                        dropTargetCollectionId = targeted ? -1 : nil
-                    } else {
-                        dropTargetCollectionId = targeted ? collection?.id : nil
-                    }
+        }
+        .onDrop(of: [.plainText], isTargeted: Binding(
+            get: { isDropTarget },
+            set: { targeted in
+                if collection == nil {
+                    dropTargetCollectionId = targeted ? -1 : nil
+                } else {
+                    dropTargetCollectionId = targeted ? collection?.id : nil
                 }
-            )) { providers in
-                handleDrop(providers: providers, collection: collection)
             }
+        )) { providers in
+            handleDrop(providers: providers, collection: collection)
+        }
     }
 
     private func chipFill(isSelected: Bool, color: Color?, isDropTarget: Bool) -> Color {
-        if isDropTarget { return Color.accentColor.opacity(0.35) }
-        if isSelected { return (color ?? Color.accentColor).opacity(0.35) }
+        if isDropTarget { return Color.white.opacity(0.18) }
+        if isSelected { return Color.white.opacity(0.14) }
         if let color { return color.opacity(0.18) }
-        return Color.secondary.opacity(0.12)
+        return Color.white.opacity(0.04)
     }
 
     private func handleDrop(providers: [NSItemProvider], collection: CollectionRecord?) -> Bool {
@@ -237,33 +297,36 @@ private struct ClipboardItemTile: View {
     let onSelect: () -> Void
 
     var body: some View {
-        let header = ClipboardItemPreview.headerTitle(for: item)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(ClipboardItemPreview.primaryTitle(for: item))
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
 
-        VStack(alignment: .leading, spacing: 4) {
-            if let header {
-                Text(header)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
+                    Text(relativeDateText)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.72))
+                }
+
+                Spacer(minLength: 8)
+
+                sourceIconBadge
             }
 
             preview
-                .frame(width: 148, height: header == nil ? 108 : 88)
+                .frame(width: 182, height: 146)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
-
-            Text(item.sourceAppName ?? "Unknown")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
         }
-        .padding(10)
-        .frame(width: 168, height: header == nil ? 148 : 158, alignment: .topLeading)
-        .background(tileFill, in: RoundedRectangle(cornerRadius: 14))
+        .padding(12)
+        .frame(width: 206, height: 226, alignment: .topLeading)
+        .background(tileFill, in: RoundedRectangle(cornerRadius: 18))
         .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(borderColor, lineWidth: isSelected ? 3 : 1)
+            RoundedRectangle(cornerRadius: 18)
+                .strokeBorder(borderColor, lineWidth: isSelected ? 2 : 1)
         )
-        .contentShape(RoundedRectangle(cornerRadius: 14))
+        .contentShape(RoundedRectangle(cornerRadius: 18))
         .gesture(
             TapGesture(count: 2).onEnded { onPaste() }
                 .exclusively(before: TapGesture().onEnded { onSelect() })
@@ -271,65 +334,177 @@ private struct ClipboardItemTile: View {
         .onDrag { NSItemProvider(object: item.uuid as NSString) }
     }
 
+    private var relativeDateText: String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: item.createdAt, relativeTo: Date())
+    }
+
     private var borderColor: Color {
-        if isSelected { return .accentColor }
-        if let folderColor { return folderColor.opacity(0.7) }
-        return Color.secondary.opacity(0.2)
+        if isSelected { return Color.white.opacity(0.7) }
+        if let folderColor { return folderColor.opacity(0.4) }
+        return Color.white.opacity(0.1)
     }
 
     private var tileFill: Color {
         if let folderColor { return folderColor.opacity(0.14) }
-        return Color(nsColor: .controlBackgroundColor).opacity(0.65)
+        return Color(red: 0.11, green: 0.13, blue: 0.22).opacity(0.98)
     }
 
     @ViewBuilder
     private var preview: some View {
-        if ClipboardItemPreview.isImage(item, payloadsRoot: payloadsRoot),
-           let img = ClipboardItemPreview.image(for: item, payloadsRoot: payloadsRoot)
+        if let linkURL = ClipboardItemPreview.linkURL(for: item), item.primaryKind == ClipboardPrimaryKind.url.rawValue {
+            linkPreview(url: linkURL)
+        } else if ClipboardItemPreview.isImage(item, payloadsRoot: payloadsRoot),
+                  let img = ClipboardItemPreview.image(for: item, payloadsRoot: payloadsRoot)
         {
-            Image(nsImage: img)
-                .resizable()
-                .scaledToFill()
-                .frame(maxWidth: 148, maxHeight: .infinity)
-                .clipped()
+            imagePreview(Image(nsImage: img).resizable())
         } else if let remoteURL = ClipboardItemPreview.remoteImageURL(for: item, payloadsRoot: payloadsRoot) {
             AsyncImage(url: remoteURL) { phase in
                 switch phase {
                 case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
+                    imagePreview(image.resizable())
                 case .failure(_):
-                    Image(systemName: "photo")
-                        .font(.largeTitle)
-                        .foregroundStyle(.secondary)
+                    placeholderPreview(systemName: "photo")
                 case .empty:
                     ProgressView()
                         .controlSize(.small)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 @unknown default:
-                    Image(systemName: "photo")
-                        .font(.largeTitle)
-                        .foregroundStyle(.secondary)
+                    placeholderPreview(systemName: "photo")
                 }
             }
-            .frame(maxWidth: 148, maxHeight: .infinity)
-            .clipped()
         } else if let text = ClipboardItemPreview.bodyText(for: item) {
             Text(text)
-                .font(.caption2)
-                .foregroundStyle(.primary)
-                .padding(8)
-                .frame(maxWidth: 148, maxHeight: .infinity, alignment: .topLeading)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.white.opacity(0.96))
+                .padding(12)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .background(Color.black.opacity(0.42))
         } else if item.primaryKind == ClipboardPrimaryKind.image.rawValue {
-            Image(systemName: "photo")
-                .font(.largeTitle)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            placeholderPreview(systemName: "photo")
         } else {
-            Image(systemName: "doc")
-                .font(.largeTitle)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            placeholderPreview(systemName: "doc")
         }
+    }
+
+    private var sourceIconBadge: some View {
+        ZStack {
+            if let image = sourceAppIcon {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .cornerRadius(10)
+            } else {
+                Image(systemName: item.primaryKind == ClipboardPrimaryKind.url.rawValue ? "link" : "app.fill")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.cyan.opacity(0.95),
+                                        Color.blue.opacity(0.8)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    )
+            }
+        }
+        .frame(width: 38, height: 38)
+    }
+
+    private var sourceAppIcon: NSImage? {
+        guard let bundleId = item.sourceBundleId,
+              let appURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleId)
+        else {
+            return nil
+        }
+        let image = NSWorkspace.shared.icon(forFile: appURL.path)
+        image.size = NSSize(width: 20, height: 20)
+        return image
+    }
+
+    @ViewBuilder
+    private func imagePreview(_ image: Image) -> some View {
+        image
+            .scaledToFit()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(10)
+            .background(Color.black.opacity(0.92))
+    }
+
+    @ViewBuilder
+    private func placeholderPreview(systemName: String) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 30, weight: .medium))
+            .foregroundStyle(Color.white.opacity(0.65))
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black.opacity(0.92))
+    }
+
+    @ViewBuilder
+    private func linkPreview(url: URL) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Spacer(minLength: 0)
+
+            HStack {
+                Spacer()
+
+                AsyncImage(url: faviconURL(for: url)) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFit()
+                    default:
+                        Image(systemName: "globe")
+                            .font(.system(size: 24, weight: .medium))
+                            .foregroundStyle(Color.white.opacity(0.78))
+                    }
+                }
+                .frame(width: 56, height: 56)
+                .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
+
+                Spacer()
+            }
+
+            Spacer(minLength: 0)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(linkTitle(for: url))
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+
+                Text(shortURLText(for: url))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.62))
+                    .lineLimit(1)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Color.black.opacity(0.92))
+    }
+
+    private func faviconURL(for url: URL) -> URL? {
+        guard let host = url.host else { return nil }
+        return URL(string: "https://www.google.com/s2/favicons?sz=128&domain=\(host)")
+    }
+
+    private func linkTitle(for url: URL) -> String {
+        url.host?.replacingOccurrences(of: "www.", with: "") ?? "Link"
+    }
+
+    private func shortURLText(for url: URL) -> String {
+        let host = url.host?.replacingOccurrences(of: "www.", with: "") ?? url.absoluteString
+        let path = url.path == "/" ? "" : url.path
+        let suffix = path.isEmpty ? "" : String(path.prefix(24))
+        return host + suffix
     }
 }
